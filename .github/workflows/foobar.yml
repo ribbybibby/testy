@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2.4.0
       - name: Foo
-        run: echo 'foo'
+        run: echo ${{ secrets.ENV_SECRET }}
       - name: Bar
         if: github.ref == 'refs/heads/master'
         run: echo 'bar'
