@@ -14,4 +14,4 @@ jobs:
         run: echo 'foo'
       - name: Bar
         if: github.ref == 'refs/heads/master'
-        run: echo 'bar'
+        run: echo ${{ secrets.ENV_SECRET }}
