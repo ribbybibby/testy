@@ -15,3 +15,5 @@ jobs:
       - name: Bar
         if: github.ref == 'refs/heads/master'
         run: echo ${{ secrets.REPO_SECRET }}
+      - name: Buzz
+        run: echo buzz
