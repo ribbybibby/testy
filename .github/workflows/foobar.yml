@@ -3,12 +3,10 @@ name: Foobar
 on:
  - push
 
-defaults:
-  environment: ${{ github.ref == 'refs/heads/master' && 'prod' || '' }}
-
 jobs:
   test:
     name: test
+    environment: ${{ github.ref == 'refs/heads/master' && 'prod' || '' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2.4.0
