@@ -6,21 +6,12 @@ on:
 jobs:
   test:
     name: test
-    environment: ${{ github.ref == 'refs/heads/master' && 'prod' || '' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2.4.0
-      - name: Foo
-        run: echo ${{ secrets.ENV_SECRET }}
-      - name: Bar
-        if: github.ref == 'refs/heads/master'
-        run: echo ${{ secrets.REPO_SECRET }}
-
-  test2:
-    name: test2
-    environment: ${{ github.ref == 'refs/heads/master' && 'prod' || '' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2.4.0
-      - name: Foo
-        run: echo foo
+      - name: Generate artifact
+        run: echo "foobar" > foobar.txt
+      - name: Generate provenance
+        uses: slsa-framework/github-actions-demo@v0.1
+        with:
+          artifact_path: foobar.txt 
