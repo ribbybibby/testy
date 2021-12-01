@@ -11,5 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2.4.0
+        with:
+          fetch-depth: 0
       - name: Generate artifact
         run: git push origin master:production
