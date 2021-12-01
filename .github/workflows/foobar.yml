@@ -1,17 +1,15 @@
 name: Foobar 
 
 on:
- - push
+  push:
+    branches:
+      - master
 
 jobs:
-  test:
-    name: test
+  promotion:
+    name: promotion
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2.4.0
       - name: Generate artifact
-        run: echo "foobar" > foobar.txt
-      - name: Generate provenance
-        uses: slsa-framework/github-actions-demo@v0.1
-        with:
-          artifact_path: foobar.txt 
+        run: git push origin master:production
