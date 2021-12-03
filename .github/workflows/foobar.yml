@@ -6,12 +6,14 @@ on:
       - master
 
 jobs:
-  promotion:
-    name: promotion
+  artifact:
+    name: artifact 
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2.4.0
-        with:
-          fetch-depth: 0
       - name: Generate artifact
-        run: git push origin master:production
+        run: echo "foobar" > foobar.txt
+      - name: Upload artifact 
+        uses: actions/upload-artifact@v2
+        with:
+          path: foobar.txt
