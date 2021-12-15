@@ -15,4 +15,4 @@ jobs:
       - name: Get token user info
         run: |
           curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            https://api.github.com/user
+            https://api.github.com/app/installations
