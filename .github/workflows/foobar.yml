@@ -2,7 +2,7 @@ name: Docker
 
 on:
   push:
-    branches: [ master ]
+    branches: [ workflow ]
 
 env:
   REGISTRY: ghcr.io
@@ -15,9 +15,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-      # This is used to complete the identity challenge
-      # with sigstore/fulcio when running outside of PRs.
-      id-token: write
     steps:
       - uses: actions/checkout@v2.4.0
       - name: Build Docker Image
@@ -30,11 +27,16 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Push image
         run: make push-image-testy
-      - name: Sign image
-        env:
-          COSIGN_EXPERIMENTAL: "true"
-        run: make sign-image-testy
-      - name: Attest image
-        env:
-          COSIGN_EXPERIMENTAL: "true"
-        run: make attest-image-testy GITHUB_CONTEXT='${{ toJSON(github) }}' RUNNER_CONTEXT='${{ toJSON(runner) }}'
+      # Pass the image ref to the provenance job
+      - name: Set the output image ref
+        id: output
+        run: make output-image-ref-testy
+    outputs:
+      image_ref: ${{ steps.output.outputs.image_ref }}
+
+  provenance:
+    needs: build
+    uses: ribbybibby/testy/.github/workflows/provenance.yml@master
+    with:
+      image_ref: ${{ needs.build.outputs.image_ref }}
+

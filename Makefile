@@ -75,3 +75,6 @@ $(ATTEST_ALL_IMAGES): attest-image-%: $(COSIGN) $(GHA_SLSA)
 	$(COSIGN) attest --type slsaprovenance --predicate predicate.json $(REGISTRY)/$*:$(VERSION)
 	$(COSIGN) verify-attestation --type slsaprovenance $(REGISTRY)/$*:$(VERSION)
 	@echo "==> Attached Github Actions attestation to $(REGISTRY)/$*:$(VERSION)"
+
+output-image-ref-%:
+	echo "::set-output name=image_ref::$(REGISTRY)/$*:$(VERSION)"

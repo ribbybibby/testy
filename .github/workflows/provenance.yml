@@ -15,7 +15,7 @@ jobs:
       # with sigstore/fulcio when running outside of PRs.
       id-token: write
     steps:
-      # Install cosign for future steps
+      # Install cosign
       - name: Install cosign
         uses: sigstore/cosign-installer@1e95c1de343b5b0c23352d6417ee3e48d5bcd422
 
@@ -32,21 +32,12 @@ jobs:
       - name: Create mock artifact
         run: echo "foobar" > mock
       - name: Generate provenance
-        uses: philips-labs/SLSA-Provenance-Action@8c78a6b34703824b9561a26b1ae5893beea9a332
+        uses: philips-labs/SLSA-Provenance-Action@33a20a00918120e29a89d86df950aea9d5a715fd
         with:
           artifact_path: mock
           output_path: 'provenance.json'
-
-      # Cosign only wants the contents of the predicate field, it figures out the
-      # subject itself
-      - name: get-predicate
+      - name: Extract predicate
         run: jq '.predicate' provenance.json > predicate.json
-
-      # Sign the image
-      - name: sign-image
-        env:
-          COSIGN_EXPERIMENTAL: "true"
-        run: cosign sign "${{ inputs.image_ref }}"
 
       # Attach and sign the attestation
       - name: attach-provenance
