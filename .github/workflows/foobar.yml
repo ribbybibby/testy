@@ -34,3 +34,7 @@ jobs:
         env:
           COSIGN_EXPERIMENTAL: "true"
         run: make sign-image-testy
+      - name: Attest image
+        env:
+          COSIGN_EXPERIMENTAL: "true"
+        run: make attest-image-testy GITHUB_CONTEXT=${{ toJSON(runner) }} RUNNER_CONTEXT=${{ toJSON(runner) }}

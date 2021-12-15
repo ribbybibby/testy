@@ -7,8 +7,15 @@ OS := $(shell $(GO) env GOOS)
 ARCH := $(shell $(GO) env GOARCH)
 
 BIN?=$(ROOT_DIR)/.bin
+
+# Make sure BIN is on the PATH
+export PATH := $(BIN):$(PATH)
+
 COSIGN_VERSION := 1.4.1
 COSIGN := $(BIN)/cosign-$(COSIGN_VERSION)
+
+GHA_SLSA_VERSION := 0.4.0
+GHA_SLSA := $(BIN)/slsa-provenance-$(GHA_SLSA_VERSION)
 
 $(BIN):
 	mkdir -p $(BIN)
@@ -16,6 +23,12 @@ $(BIN):
 $(COSIGN): $(BIN)
 	curl -sSL -o $(COSIGN) https://github.com/sigstore/cosign/releases/download/v$(COSIGN_VERSION)/cosign-$(OS)-$(ARCH) && \
 	chmod +x $(COSIGN)
+
+$(GHA_SLSA): $(BIN)
+	mkdir -p $(BIN)/slsa
+	wget -qO - https://github.com/philips-labs/slsa-provenance-action/releases/download/v$(GHA_SLSA_VERSION)/slsa-provenance_$(GHA_SLSA_VERSION)_$(OS)_$(ARCH).tar.gz | tar xvz -C $(BIN)/slsa/
+	mv $(BIN)/slsa/slsa-provenance $(GHA_SLSA)
+	chmod +x $(GHA_SLSA)
 
 IMAGE_DOCKERFILES:=$(wildcard $(ROOT_DIR)/dockerfiles/*.dockerfile)
 IMAGE_TARGETS:= $(patsubst $(ROOT_DIR)/dockerfiles/%.dockerfile,%,$(IMAGE_DOCKERFILES))
@@ -51,3 +64,14 @@ $(PUSH_ALL_IMAGES): push-image-%:
 	docker push $(REGISTRY)/$*:$(VERSION)
 	docker push $(REGISTRY)/$*:latest
 	@echo "==> Pushed $(REGISTRY)/$* with tags '$(VERSION)' and 'latest'"
+
+
+ATTEST_ALL_IMAGES:= $(addprefix attest-image-,$(IMAGE_TARGETS))
+attest-all-images: $(SIGN_ALL_IMAGES)
+$(ATTEST_ALL_IMAGES): attest-image-%: $(COSIGN) $(GHA_SLSA)
+	@echo "==> Attaching Github Actions attestation to $(REGISTRY)/$*:$(VERSION)"
+	$(GHA_SLSA) generate -artifact_path $(GHA_SLSA) -output_path provenance.json -github_context $(GITHUB_CONTEXT) -runner_context $(RUNNER_CONTEXT)
+	jq '.predicate' provenance.json > predicate.json
+	$(COSIGN) attest --type slsaprovenance --predicate predicate.json $(REGISTRY)/$*:$(VERSION)
+	$(COSIGN) verify-attestation --type slsaprovenance $(REGISTRY)/$*:$(VERSION)
+	@echo "==> Attached Github Actions attestation to $(REGISTRY)/$*:$(VERSION)"
