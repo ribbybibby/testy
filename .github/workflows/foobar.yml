@@ -23,6 +23,9 @@ jobs:
       # This is used to complete the identity challenge
       # with sigstore/fulcio when running outside of PRs.
       id-token: write
+    
+    outputs:
+      image_ref: ${{ steps.output.outputs.image_ref }} 
 
     steps:
       - name: Checkout repository
