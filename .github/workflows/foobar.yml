@@ -1,10 +1,5 @@
 name: Docker
 
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by a third-party and are governed by
-# separate terms of service, privacy policy, and support
-# documentation.
-
 on:
   push:
     branches: [ master ]
@@ -23,59 +18,19 @@ jobs:
       # This is used to complete the identity challenge
       # with sigstore/fulcio when running outside of PRs.
       id-token: write
-    
-    outputs:
-      image_ref: ${{ steps.output.outputs.image_ref }} 
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      # Workaround: https://github.com/docker/build-push-action/issues/461
-      - name: Setup Docker buildx
-        uses: docker/setup-buildx-action@79abd3f86f79a9d68a23c75a09a9a85889262adf
-
-      # Login against a Docker registry except on PR
-      # https://github.com/docker/login-action
+      - uses: actions/checkout@v2.4.0
+      - name: Build Docker Image
+        run: make build-image-testy
       - name: Log into registry ${{ env.REGISTRY }}
         uses: docker/login-action@28218f9b04b4f3f62068d7b6ce6ca5b26e35336c
         with:
-          registry: ${{ env.REGISTRY }}
+          registry: ghcr.io 
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      # Extract metadata (tags, labels) for Docker
-      # https://github.com/docker/metadata-action
-      - name: Extract Docker metadata
-        id: meta
-        uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-
-      # Build and push Docker image with Buildx (don't push on PR)
-      # https://github.com/docker/build-push-action
-      - name: Build and push Docker image
-        id: build-and-push
-        uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
-        with:
-          context: .
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-
-      # Pass the image ref to the provenance job
-      - name: Set the output image ref
-        id: output
-        run: echo "::set-output name=image_ref::${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build-and-push.outputs.digest }}"
-
-  debug:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo ${{ needs.build.outputs.image_ref }}
-
-  provenance:
-    needs: build
-    uses: ribbybibby/testy/.github/workflows/provenance.yml@master
-    with:
-      image_ref: ${{ needs.build.outputs.image_ref }}
+      - name: Push image
+        run: make push-image-testy
+      - name: Sign image
+        env:
+          COSIGN_EXPERIMENTAL: "true"
+        run: make sign-image-testy
