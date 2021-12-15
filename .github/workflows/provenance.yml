@@ -57,4 +57,4 @@ jobs:
       - name: attach-provenance
         env:
           COSIGN_EXPERIMENTAL: "true"
-        run: cosign attest ---type slsaprovenance --predicate predicate.json --type slsaprovenance "${{ inputs.image_ref }}"
+        run: cosign attest --type slsaprovenance --predicate predicate.json "${{ inputs.image_ref }}"
