@@ -70,7 +70,7 @@ ATTEST_ALL_IMAGES:= $(addprefix attest-image-,$(IMAGE_TARGETS))
 attest-all-images: $(SIGN_ALL_IMAGES)
 $(ATTEST_ALL_IMAGES): attest-image-%: $(COSIGN) $(GHA_SLSA)
 	@echo "==> Attaching Github Actions attestation to $(REGISTRY)/$*:$(VERSION)"
-	$(GHA_SLSA) generate -artifact_path $(GHA_SLSA) -output_path provenance.json -github_context $(GITHUB_CONTEXT) -runner_context $(RUNNER_CONTEXT)
+	$(GHA_SLSA) generate -artifact_path $(GHA_SLSA) -output_path provenance.json -github_context '$(GITHUB_CONTEXT)' -runner_context '$(RUNNER_CONTEXT)'
 	jq '.predicate' provenance.json > predicate.json
 	$(COSIGN) attest --type slsaprovenance --predicate predicate.json $(REGISTRY)/$*:$(VERSION)
 	$(COSIGN) verify-attestation --type slsaprovenance $(REGISTRY)/$*:$(VERSION)
