@@ -2,5 +2,5 @@
 
 while true; do
   sleep 3
-  echo "Sleeping..."
+  echo "Sleeping...."
 done
