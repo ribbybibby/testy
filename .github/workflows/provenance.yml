@@ -31,6 +31,8 @@ jobs:
         uses: philips-labs/SLSA-Provenance-Action@8c78a6b34703824b9561a26b1ae5893beea9a332
         with:
           artifact_path: mock
+          output_path: 'provenance.json'
+
   
       # Cosign only wants the contents of the predicate field, it figures out the
       # subject itself
