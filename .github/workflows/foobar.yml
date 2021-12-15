@@ -62,7 +62,7 @@ jobs:
 
       # Pass the image ref to the provenance job
       - name: Set the output image ref
-        run: echo "::set-output image_ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build-and-push.outputs.digest }}"
+        run: echo "::set-output name=image_ref::${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build-and-push.outputs.digest }}"
 
   provenance:
     needs: build
