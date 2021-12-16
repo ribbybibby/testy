@@ -36,7 +36,7 @@ jobs:
 
   provenance:
     needs: build
-    uses: ribbybibby/testy/.github/workflows/provenance.yml@workflow
+    uses: ribbybibby/testy/.github/workflows/provenance.yml
     with:
       image_ref: ${{ needs.build.outputs.image_ref }}
 
