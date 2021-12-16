@@ -34,7 +34,7 @@ jobs:
       - name: Create mock artifact
         run: echo "foobar" > mock
       - name: Generate provenance
-        uses: docker://ghcr.io/philips-labs/slsa-provenance@sha256:961312222720166ce5955d075c534f7037de3a7aac72957bb1834ebd5ea68c68
+        uses: philips-labs/slsa-provenance-action@v0.4.0
         with:
           artifact_path: mock
           output_path: 'provenance.json'
