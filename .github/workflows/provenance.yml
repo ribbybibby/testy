@@ -32,7 +32,7 @@ jobs:
       - name: Create mock artifact
         run: echo "foobar" > mock
       - name: Generate provenance
-        uses: philips-labs/SLSA-Provenance-Action@v0.3.0
+        uses: philips-labs/SLSA-Provenance-Action@sha256:961312222720166ce5955d075c534f7037de3a7aac72957bb1834ebd5ea68c68
         with:
           artifact_path: mock
           output_path: 'provenance.json'
