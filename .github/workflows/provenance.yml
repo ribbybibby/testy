@@ -9,6 +9,7 @@ on:
         type: string
 env:
   KMS_KEY: "gcpkms://projects/jetstack-rob-best/locations/europe-west1/keyRings/rob-best/cryptoKeys/cosign/versions/1"
+  GOOGLE_APPLICATION_CREDENTIALS: "/tmp/credentials.json"
 
 jobs:
   generate-provenance:
@@ -37,9 +38,11 @@ jobs:
 
       - name: Activate service account and sign
         run: |
+          echo "${COSIGN_GCP_SVC_ACCOUNT}" | base64 -d | gcloud auth activate-service-account --key-file -
           echo "${COSIGN_GCP_SVC_ACCOUNT}" | base64 -d > /tmp/credentials.json
-          cosign version
-          cosign sign --key "${{ env.KMS_KEY }}" "${{ inputs.image_ref }}"
         env:
-          COSIGN_GCP_SVC_ACCOUNT: ${{ secrets.COSIGN_GCP_SVC_ACCOUNT }}
-          GOOGLE_APPLICATION_CREDENTIALS: "/tmp/credentials.json"
+         COSIGN_GCP_SVC_ACCOUNT: ${{ secrets.COSIGN_GCP_SVC_ACCOUNT }}
+
+      - name: Sign
+        run: |
+          cosign sign --key "${{ env.KMS_KEY }}" "${{ inputs.image_ref }}"
