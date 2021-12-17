@@ -35,11 +35,9 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Activate service account
+      - name: Activate service account and sign
         run: |
           echo "${COSIGN_GCP_SVC_ACCOUNT}" | base64 -d | gcloud auth activate-service-account --key-file -
+          cosign sign --key ${{ env.KMS_KEY }} "${{ inputs.image_ref }}"
         env:
           COSIGN_GCP_SVC_ACCOUNT: ${{ secrets.COSIGN_GCP_SVC_ACCOUNT }}
-
-      - name: Sign 
-        run: cosign sign --key ${{ env.KMS_KEY }} "${{ inputs.image_ref }}"
