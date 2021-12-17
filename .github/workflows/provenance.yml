@@ -1,5 +1,8 @@
 on:
   workflow_call:
+    secrets:
+      COSIGN_GCP_SVC_ACCOUNT:
+        required: true
     inputs:
       image_ref:
         required: true
