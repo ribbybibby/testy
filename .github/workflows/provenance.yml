@@ -43,6 +43,9 @@ jobs:
       #  run: echo "${COSIGN_GCP_SVC_ACCOUNT}" | base64 -d | docker login -u _json_key --password-stdin https://eu.gcr.io
       #  env:
       #    COSIGN_GCP_SVC_ACCOUNT: ${{ secrets.COSIGN_GCP_SVC_ACCOUNT }}
+      - name: Docker Login
+        run: |
+          gcloud auth configure-docker
 
       - name: Sign
         run: |
