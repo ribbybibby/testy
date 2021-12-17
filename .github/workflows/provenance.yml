@@ -37,9 +37,10 @@ jobs:
 
       - run: |
           wget https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.19.0/cyclonedx-linux-x64
-          echo "c69838631671633c8910429e262151590551ed90ccbee9715558623b8d302f22  cyclonedx-linux-x64" | sha256sum --check
+          echo "${CYCLONEDX_SHA256}  cyclonedx-linux-x64" | sha256sum --check
           chmod +x cyclonedx-linux-x64
-
+        env:
+          CYCLONEDX_SHA256: "c69838631671633c8910429e262151590551ed90ccbee9715558623b8d302f22" 
       - uses: google-github-actions/auth@v0
         with:
           credentials_json: ${{ secrets.COSIGN_GCP_SVC_ACCOUNT }}
