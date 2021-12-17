@@ -4,6 +4,9 @@ on:
       image_ref:
         required: true
         type: string
+env:
+  KMS_KEY: "gcpkms://projects/jetstack-rob-best/locations/europe-west1/keyRings/rob-best/cryptoKeys/cosign/versions/1"
+
 jobs:
   generate-provenance:
     name: Generate provenance for image
@@ -29,20 +32,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Cosign handles figuring out the subject, so just create a mock artifact to
-      # operate on. We'll discard the subject field later anyway.
-      - name: Create mock artifact
-        run: echo "foobar" > mock
-      - name: Generate provenance
-        uses: philips-labs/slsa-provenance-action@v0.4.0
-        with:
-          artifact_path: mock
-          output_path: 'provenance.json'
-      - name: Extract predicate
-        run: jq '.predicate' provenance.json > predicate.json
-
-      # Attach and sign the attestation
-      - name: attach-provenance
+      - name: Activate service account
+        run: |
+          echo "${COSIGN_GCP_SVC_ACCOUNT}" | base64 -d | gcloud auth activate-service-account --key-file -
         env:
-          COSIGN_EXPERIMENTAL: "true"
-        run: cosign attest --type slsaprovenance --predicate predicate.json "${{ inputs.image_ref }}"
+          COSIGN_GCP_SVC_ACCOUNT: ${{ secrets.COSIGN_GCP_SVC_ACCOUNT }}
+
+      - name: Sign 
+        run: cosign sign --key ${{ env.KMS_KEY }} "${{ inputs.image_ref }}"
