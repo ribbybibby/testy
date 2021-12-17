@@ -25,6 +25,10 @@ jobs:
           registry: ghcr.io 
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Docker Login GCR
+        run: echo "${COSIGN_GCP_SVC_ACCOUNT}" | base64 -d | docker login -u _json_key --password-stdin https://eu.gcr.io
+        env:
+          COSIGN_GCP_SVC_ACCOUNT: ${{ secrets.COSIGN_GCP_SVC_ACCOUNT }}
       - name: Push image
         run: make push-image-testy
       # Pass the image ref to the provenance job

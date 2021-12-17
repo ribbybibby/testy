@@ -36,7 +36,7 @@ IMAGE_TARGETS:= $(patsubst $(ROOT_DIR)/dockerfiles/%.dockerfile,%,$(IMAGE_DOCKER
 COMMIT:=$(shell git rev-list -1 HEAD)
 VERSION:=$(COMMIT)
 
-REGISTRY:=ghcr.io/ribbybibby
+REGISTRY:=eu.gcr.io/jetstack-rob-best
 
 .SECONDEXPANSION:
 testy.REQUIREMENTS:= 
