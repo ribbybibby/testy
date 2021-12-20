@@ -36,7 +36,7 @@ jobs:
 
   provenance:
     needs: build
-    uses: ribbybibby/testy/.github/workflows/provenance.yml@workflow
+    uses: ribbybibby/testy/.github/workflows/provenance.yml@master
     secrets:
       COSIGN_GCP_SVC_ACCOUNT: ${{ secrets.COSIGN_GCP_SVC_ACCOUNT }}
     with:
