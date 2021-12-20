@@ -19,16 +19,13 @@ jobs:
       - uses: actions/checkout@v2.4.0
       - name: Build Docker Image
         run: make build-image-testy
-      - name: Log into registry ${{ env.REGISTRY }}
-        uses: docker/login-action@28218f9b04b4f3f62068d7b6ce6ca5b26e35336c
+      - uses: google-github-actions/auth@v0.4.0
         with:
-          registry: ghcr.io 
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Docker Login GCR
-        run: echo "${COSIGN_GCP_SVC_ACCOUNT}" | base64 -d | docker login -u _json_key --password-stdin https://eu.gcr.io
-        env:
-          COSIGN_GCP_SVC_ACCOUNT: ${{ secrets.COSIGN_GCP_SVC_ACCOUNT }}
+          workload_identity_provider: 'projects/998629990322/locations/global/workloadIdentityPools/cosign/providers/cosign'
+          service_account: 'cosigner@jetstack-rob-best.iam.gserviceaccount.com'
+      - name: Docker Login
+        run: |
+          gcloud auth configure-docker
       - name: Push image
         run: make push-image-testy
       # Pass the image ref to the provenance job
