@@ -27,28 +27,15 @@ jobs:
         with:
           cosign-release: v1.4.1
 
-      # Login to the registry
-      - name: Log into registry ${{ env.REGISTRY }}
-        uses: docker/login-action@28218f9b04b4f3f62068d7b6ce6ca5b26e35336c
-        with:
-          registry: ghcr.io 
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+      #- uses: google-github-actions/auth@v0
+      #  with:
+      #    credentials_json: ${{ secrets.COSIGN_GCP_SVC_ACCOUNT }}
 
-      - run: |
-          wget https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.19.0/cyclonedx-linux-x64
-          echo "${CYCLONEDX_SHA256}  cyclonedx-linux-x64" | sha256sum --check
-          chmod +x cyclonedx-linux-x64
-        env:
-          CYCLONEDX_SHA256: "c69838631671633c8910429e262151590551ed90ccbee9715558623b8d302f22" 
-      - uses: google-github-actions/auth@v0
+      - uses: google-github-actions/auth@v0.4.0
         with:
-          credentials_json: ${{ secrets.COSIGN_GCP_SVC_ACCOUNT }}
+          workload_identity_provider: 'projects/998629990322/locations/global/workloadIdentityPools/cosign/providers/cosign'
+          service_account: 'cosigner@jetstack-rob-best.iam.gserviceaccount.com'
 
-      #- name: Docker Login GCR
-      #  run: echo "${COSIGN_GCP_SVC_ACCOUNT}" | base64 -d | docker login -u _json_key --password-stdin https://eu.gcr.io
-      #  env:
-      #    COSIGN_GCP_SVC_ACCOUNT: ${{ secrets.COSIGN_GCP_SVC_ACCOUNT }}
       - name: Docker Login
         run: |
           gcloud auth configure-docker
