@@ -1,15 +1,12 @@
 on:
   workflow_call:
-    secrets:
-      COSIGN_GCP_SVC_ACCOUNT:
-        required: true
     inputs:
       image_ref:
         required: true
         type: string
 env:
   KMS_KEY: "gcpkms://projects/jetstack-rob-best/locations/europe-west1/keyRings/rob-best/cryptoKeys/cosign/versions/1"
-  GCP_WORKLOAD_IDENTITY_PROVIDER: 'projects/998629990322/locations/global/workloadIdentityPools/cosign/providers/cosign'
+  GCP_WORKLOAD_IDENTITY_PROVIDER: 'projects/998629990322/locations/global/workloadIdentityPools/ribbybibby/providers/testy'
   GCP_SERVICE_ACCOUNT: 'cosigner@jetstack-rob-best.iam.gserviceaccount.com'
 
 jobs:

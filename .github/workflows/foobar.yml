@@ -5,9 +5,8 @@ on:
     branches: [ sbom ]
 
 env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
-
+  GCP_WORKLOAD_IDENTITY_PROVIDER: 'projects/998629990322/locations/global/workloadIdentityPools/ribbybibby/providers/testy'
+  GCP_SERVICE_ACCOUNT: 'cosigner@jetstack-rob-best.iam.gserviceaccount.com'
 
 jobs:
   build:
@@ -20,8 +19,8 @@ jobs:
         run: make build-image-testy
       - uses: google-github-actions/auth@v0.4.0
         with:
-          workload_identity_provider: 'projects/998629990322/locations/global/workloadIdentityPools/cosign/providers/cosign'
-          service_account: 'cosigner@jetstack-rob-best.iam.gserviceaccount.com'
+          workload_identity_provider: ${{ env.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
       - name: Docker Login
         run: |
           gcloud auth configure-docker
@@ -37,8 +36,6 @@ jobs:
   provenance:
     needs: build
     uses: ribbybibby/testy/.github/workflows/provenance.yml@sbom
-    secrets:
-      COSIGN_GCP_SVC_ACCOUNT: ${{ secrets.COSIGN_GCP_SVC_ACCOUNT }}
     with:
       image_ref: ${{ needs.build.outputs.image_ref }}
 
