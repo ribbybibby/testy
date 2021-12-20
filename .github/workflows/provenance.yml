@@ -109,7 +109,7 @@ jobs:
         if: ${{ inputs.dep_file != '' }}
         run: |
           syft file:${{ inputs.dep_file }} --output cyclonedx --file file-sbom.cyclonedx
-          cyclonedx-linux-x64 merge --input-files sbom.cyclonedx file-sbom.cyclonedx --input-format xml --output-format xml --output-file merged-sbom.cyclonedx
+          ./cyclonedx merge --input-files sbom.cyclonedx file-sbom.cyclonedx --input-format xml --output-format xml --output-file merged-sbom.cyclonedx
           mv merged-sbom.cyclonedx sbom.cyclonedx
 
       - name: Attach SBOM
