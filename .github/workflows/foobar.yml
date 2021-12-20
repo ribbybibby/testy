@@ -2,7 +2,7 @@ name: Docker
 
 on:
   push:
-    branches: [ master ]
+    branches: [ sbom ]
 
 env:
   REGISTRY: ghcr.io
@@ -36,7 +36,7 @@ jobs:
 
   provenance:
     needs: build
-    uses: ribbybibby/testy/.github/workflows/provenance.yml@master
+    uses: ribbybibby/testy/.github/workflows/provenance.yml@sbom
     secrets:
       COSIGN_GCP_SVC_ACCOUNT: ${{ secrets.COSIGN_GCP_SVC_ACCOUNT }}
     with:

@@ -23,6 +23,9 @@ jobs:
         with:
           cosign-release: v1.4.1
 
+      - name: Get Syft
+        uses: anchore/sbom-action/download-syft@v0.6.0
+
       - uses: google-github-actions/auth@v0.4.0
         with:
           workload_identity_provider: 'projects/998629990322/locations/global/workloadIdentityPools/cosign/providers/cosign'
@@ -32,6 +35,12 @@ jobs:
         run: |
           gcloud auth configure-docker
 
+      - name: Build the Image SBOM
+        run: syft packages "${{ inputs.image_ref }}" --output cyclonedx --file sbom.cyclonedx
+
       - name: Sign
         run: |
           cosign sign --key "${{ env.KMS_KEY }}" "${{ inputs.image_ref }}"
+
+      - name: Attach SBOM
+        run: cosign attach sbom --type cyclonedx --sbom sbom.cyclonedx "${{ inputs.image_ref }}"
