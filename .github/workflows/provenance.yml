@@ -43,4 +43,9 @@ jobs:
           cosign sign --key "${{ env.KMS_KEY }}" "${{ inputs.image_ref }}"
 
       - name: Attach SBOM
-        run: cosign attach sbom --type cyclonedx --sbom sbom.cyclonedx "${{ inputs.image_ref }}"
+        run: |
+          cosign attach sbom --type cyclonedx --sbom sbom.cyclonedx "${{ inputs.image_ref }}"
+          cosign sign --attachment sbom --key "${{ env.KMS_KEY }}" "${{ inputs.image_ref }}"
+
+      - name: Verify SBOM
+        run: cosign verify --attachment sbom --key "${{ env.KMS_KEY }}" "${{ inputs.image_ref }}"
