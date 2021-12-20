@@ -15,9 +15,6 @@ jobs:
     name: Generate provenance for image
     runs-on: ubuntu-20.04
     permissions:
-      #contents: read
-      # This is used to complete the identity challenge
-      # with sigstore/fulcio when running outside of PRs.
       id-token: write
     steps:
       # Install cosign
@@ -25,10 +22,6 @@ jobs:
         uses: sigstore/cosign-installer@main
         with:
           cosign-release: v1.4.1
-
-      #- uses: google-github-actions/auth@v0
-      #  with:
-      #    credentials_json: ${{ secrets.COSIGN_GCP_SVC_ACCOUNT }}
 
       - uses: google-github-actions/auth@v0.4.0
         with:
