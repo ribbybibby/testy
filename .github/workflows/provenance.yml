@@ -1,55 +1,37 @@
 on:
   workflow_call:
+    secrets:
+      COSIGN_GCP_SVC_ACCOUNT:
+        required: true
     inputs:
       image_ref:
         required: true
         type: string
+env:
+  KMS_KEY: "gcpkms://projects/jetstack-rob-best/locations/europe-west1/keyRings/rob-best/cryptoKeys/cosign/versions/1"
+
 jobs:
   generate-provenance:
     name: Generate provenance for image
     runs-on: ubuntu-20.04
     permissions:
-      contents: read
-      packages: write
-      # This is used to complete the identity challenge
-      # with sigstore/fulcio when running outside of PRs.
       id-token: write
     steps:
-      # Install cosign for future steps
+      # Install cosign
       - name: Install cosign
-        uses: sigstore/cosign-installer@1e95c1de343b5b0c23352d6417ee3e48d5bcd422
-
-      # Login to the registry
-      - name: Log into registry ${{ env.REGISTRY }}
-        uses: docker/login-action@28218f9b04b4f3f62068d7b6ce6ca5b26e35336c
+        uses: sigstore/cosign-installer@main
         with:
-          registry: ghcr.io 
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          cosign-release: v1.4.1
 
-      # Cosign handles figuring out the subject, so just create a mock artifact to
-      # operate on. We'll discard the subject field later anyway.
-      - name: Create mock artifact
-        run: echo "foobar" > mock
-      - name: Generate provenance
-        uses: philips-labs/SLSA-Provenance-Action@8c78a6b34703824b9561a26b1ae5893beea9a332
+      - uses: google-github-actions/auth@v0.4.0
         with:
-          artifact_path: mock
-          output_path: 'provenance.json'
+          workload_identity_provider: 'projects/998629990322/locations/global/workloadIdentityPools/cosign/providers/cosign'
+          service_account: 'cosigner@jetstack-rob-best.iam.gserviceaccount.com'
 
-      # Cosign only wants the contents of the predicate field, it figures out the
-      # subject itself
-      - name: get-predicate
-        run: jq '.predicate' provenance.json > predicate.json
+      - name: Docker Login
+        run: |
+          gcloud auth configure-docker
 
-      # Sign the image
-      - name: sign-image
-        env:
-          COSIGN_EXPERIMENTAL: "true"
-        run: cosign sign "${{ inputs.image_ref }}"
-
-      # Attach and sign the attestation
-      - name: attach-provenance
-        env:
-          COSIGN_EXPERIMENTAL: "true"
-        run: cosign attest --type slsaprovenance --predicate predicate.json "${{ inputs.image_ref }}"
+      - name: Sign
+        run: |
+          cosign sign --key "${{ env.KMS_KEY }}" "${{ inputs.image_ref }}"
