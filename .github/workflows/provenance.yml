@@ -9,6 +9,8 @@ on:
         type: string
 env:
   KMS_KEY: "gcpkms://projects/jetstack-rob-best/locations/europe-west1/keyRings/rob-best/cryptoKeys/cosign/versions/1"
+  GCP_WORKLOAD_IDENTITY_PROVIDER: 'projects/998629990322/locations/global/workloadIdentityPools/cosign/providers/cosign'
+  GCP_SERVICE_ACCOUNT: 'cosigner@jetstack-rob-best.iam.gserviceaccount.com'
 
 jobs:
   generate-provenance:
@@ -28,8 +30,8 @@ jobs:
 
       - uses: google-github-actions/auth@v0.4.0
         with:
-          workload_identity_provider: 'projects/998629990322/locations/global/workloadIdentityPools/cosign/providers/cosign'
-          service_account: 'cosigner@jetstack-rob-best.iam.gserviceaccount.com'
+          workload_identity_provider: ${{ env.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
 
       - name: Docker Login
         run: |
