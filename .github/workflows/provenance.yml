@@ -4,28 +4,25 @@ on:
       image_ref:
         required: true
         type: string
+      dep_file:
+        type: string
+
 env:
   KMS_KEY: "gcpkms://projects/jetstack-rob-best/locations/europe-west1/keyRings/rob-best/cryptoKeys/cosign/versions/1"
   GCP_WORKLOAD_IDENTITY_PROVIDER: 'projects/998629990322/locations/global/workloadIdentityPools/ribbybibby/providers/testy'
   GCP_SERVICE_ACCOUNT: 'cosigner@jetstack-rob-best.iam.gserviceaccount.com'
 
 jobs:
-  generate-provenance:
-    name: Generate provenance for image
+  sign:
     runs-on: ubuntu-20.04
     permissions:
       id-token: write
     steps:
-      # Install cosign
       - name: Install cosign
-        uses: sigstore/cosign-installer@main
-        with:
-          cosign-release: v1.4.1
+        uses: sigstore/cosign-installer@v1.4.1
 
-      - name: Get Syft
-        uses: anchore/sbom-action/download-syft@v0.6.0
-
-      - uses: google-github-actions/auth@v0.4.0
+      - name: Activate service account
+        uses: google-github-actions/auth@v0.4.0
         with:
           workload_identity_provider: ${{ env.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
@@ -34,17 +31,92 @@ jobs:
         run: |
           gcloud auth configure-docker
 
-      - name: Build the Image SBOM
-        run: syft packages "${{ inputs.image_ref }}" --output cyclonedx --file sbom.cyclonedx
+      - name: Sign the image
+        run: cosign sign --key ${{ env.KMS_KEY }} "${{ inputs.image_ref }}"
 
-      - name: Sign
+      - name: Verify the image
+        run: cosign verify --key ${{ env.KMS_KEY }} "${{ inputs.image_ref }}"
+
+  attest:
+    runs-on: ubuntu-20.04
+    permissions:
+      id-token: write
+    steps:
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v1.4.1
+
+      - name: Create mock artifact
+        run: echo "foobar" > mock
+      - name: Generate provenance
+        uses: philips-labs/SLSA-Provenance-Action@v0.4.0
+        with:
+          artifact_path: mock
+          output_path: 'provenance.json'
+      - name: Extract predicate
+        run: jq '.predicate' provenance.json > predicate.json
+
+      - name: Activate service account
+        uses: google-github-actions/auth@v0.4.0
+        with:
+          workload_identity_provider: ${{ env.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
+
+      - name: Docker Login
         run: |
-          cosign sign --key "${{ env.KMS_KEY }}" "${{ inputs.image_ref }}"
+          gcloud auth configure-docker
+
+      - name: Attach the attestation to the image
+        run: cosign attest --type slsaprovenance --predicate predicate.json --key ${{ env.KMS_KEY }} "${{ inputs.image_ref }}"
+
+      - name: Verify the image attestation
+        run: cosign verify-attestation --type slsaprovenance --key ${{ env.KMS_KEY }} "${{ inputs.image_ref }}"
+
+  sbom:
+    runs-on: ubuntu-20.04
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v2.4.0
+        if: ${{ inputs.dep_file != '' }}
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v1.4.1
+
+      - name: Install Syft
+        uses: anchore/sbom-action/download-syft@v0.6.0
+
+      - name: Install CycloneDX
+        if: ${{ inputs.dep_file != '' }}
+        run: |
+          wget -O cyclonedx https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.19.0/cyclonedx-linux-x64
+          echo "c69838631671633c8910429e262151590551ed90ccbee9715558623b8d302f22  cyclonedx" | sha256sum --check
+          chmod +x cyclonedx
+
+      - name: Activate service account
+        uses: google-github-actions/auth@v0.4.0
+        with:
+          workload_identity_provider: ${{ env.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
+
+      - name: Docker Login
+        run: |
+          gcloud auth configure-docker
+
+      - name: Generate SBOM from image
+        run: syft "${{ inputs.image_ref }}" --output cyclonedx --file sbom.cyclonedx
+
+      - name: Generate SBOM from file
+        if: ${{ inputs.dep_file != '' }}
+        run: |
+          syft file:${{ inputs.dep_file }} --output cyclonedx --file file-sbom.cyclonedx
+          cyclonedx-linux-x64 merge --input-files sbom.cyclonedx file-sbom.cyclonedx --input-format xml --output-format xml --output-file merged-sbom.cyclonedx
+          mv merged-sbom.cyclonedx sbom.cyclonedx
 
       - name: Attach SBOM
-        run: |
-          cosign attach sbom --type cyclonedx --sbom sbom.cyclonedx "${{ inputs.image_ref }}"
-          cosign sign --attachment sbom --key "${{ env.KMS_KEY }}" "${{ inputs.image_ref }}"
+        run: cosign attach sbom --type cyclonedx --sbom sbom.cyclonedx "${{ inputs.image_ref }}"
+
+      - name: Sign SBOM
+        run: cosign sign --attachment=sbom --key ${{ env.KMS_KEY }} "${{ inputs.image_ref }}"
 
       - name: Verify SBOM
-        run: cosign verify --attachment sbom --key "${{ env.KMS_KEY }}" "${{ inputs.image_ref }}"
+        run: cosign verify --attachment=sbom --key ${{ env.KMS_KEY }} "${{ inputs.image_ref }}"
