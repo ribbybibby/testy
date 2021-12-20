@@ -2,7 +2,7 @@ name: Docker
 
 on:
   push:
-    branches: [ sbom ]
+    branches: [ master ]
 
 env:
   GCP_WORKLOAD_IDENTITY_PROVIDER: 'projects/998629990322/locations/global/workloadIdentityPools/ribbybibby/providers/testy'
@@ -35,7 +35,7 @@ jobs:
 
   provenance:
     needs: build
-    uses: ribbybibby/testy/.github/workflows/provenance.yml@sbom
+    uses: ribbybibby/testy/.github/workflows/provenance.yml@master
     with:
       image_ref: ${{ needs.build.outputs.image_ref }}
 
