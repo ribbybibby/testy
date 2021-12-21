@@ -45,15 +45,45 @@ jobs:
       - name: Install cosign
         uses: sigstore/cosign-installer@v1.4.1
 
-      - name: Create mock artifact
-        run: echo "foobar" > mock
       - name: Generate provenance
-        uses: philips-labs/SLSA-Provenance-Action@v0.4.0
-        with:
-          artifact_path: mock
-          output_path: 'provenance.json'
-      - name: Extract predicate
-        run: jq '.predicate' provenance.json > predicate.json
+        run: |
+          cat << EOF > predicate.json
+          {
+            "builder": {
+              "id": "https://github.com/${{ github.repository }}/Attestations/GitHubHostedActions@v1"
+            },
+            "buildType": "https://github.com/Attestations/GitHubActionsWorkflow@v1",
+            "invocation": {
+              "configSource": {
+                "entryPoint": "${{ github.workflow }}",
+                "uri": "git+https://github.com/${{ github.repository }}",
+                "digest": {
+                  "sha1": "${{ github.sha }}"
+                }
+              },
+              "parameters": null,
+              "environment": null
+            },
+            "metadata": {
+              "buildInvocationId": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+              "buildFinishedOn": "2021-12-14T12:52:16Z",
+              "completeness": {
+                "parameters": true,
+                "environment": false,
+                "materials": false
+              },
+              "reproducible": false
+            },
+            "materials": [
+              {
+                "uri": "git+https://github.com/${{ github.repository }}",
+                "digest": {
+                  "sha1": "${{ github.sha }}"
+                }
+              }
+            ]
+          }
+          EOF
 
       - name: Activate service account
         uses: google-github-actions/auth@v0.4.0
