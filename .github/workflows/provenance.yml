@@ -66,7 +66,7 @@ jobs:
             },
             "metadata": {
               "buildInvocationId": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
-              "buildFinishedOn": "2021-12-14T12:52:16Z",
+              "buildFinishedOn": "$(date --rfc-3339=seconds)",
               "completeness": {
                 "parameters": true,
                 "environment": false,
