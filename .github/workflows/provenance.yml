@@ -29,7 +29,7 @@ jobs:
 
       - name: Docker Login
         run: |
-          gcloud auth configure-docker
+          gcloud auth configure-docker eu.gcr.io
 
       - name: Sign the image
         run: cosign sign --key ${{ env.KMS_KEY }} "${{ inputs.image_ref }}"
@@ -93,7 +93,7 @@ jobs:
 
       - name: Docker Login
         run: |
-          gcloud auth configure-docker
+          gcloud auth configure-docker eu.gcr.io
 
       - name: Attach the attestation to the image
         run: cosign attest --type slsaprovenance --predicate predicate.json --key ${{ env.KMS_KEY }} "${{ inputs.image_ref }}"
@@ -130,7 +130,7 @@ jobs:
 
       - name: Docker Login
         run: |
-          gcloud auth configure-docker
+          gcloud auth configure-docker eu.gcr.io
 
       - name: Generate SBOM from image
         run: syft "${{ inputs.image_ref }}" --output cyclonedx --file sbom.cyclonedx

@@ -23,7 +23,7 @@ jobs:
           service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
       - name: Docker Login
         run: |
-          gcloud auth configure-docker
+          gcloud auth configure-docker eu.gcr.io
       - name: Push image
         run: make push-image-testy
       # Pass the image ref to the provenance job
