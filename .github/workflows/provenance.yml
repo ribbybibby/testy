@@ -45,13 +45,19 @@ jobs:
       - name: Install cosign
         uses: sigstore/cosign-installer@v1.4.1
 
-      - name: Create mock artifact
-        run: echo "foobar" > mock
-      - name: Generate provenance
-        uses: ribbybibby/slsa-provenance-action@context-from-env
+      - name: Checkout
+        uses: actions/checkout@v2.4.0
         with:
-          artifact_path: mock
-          output_path: 'provenance.json'
+          repository: ribbybibby/slsa-provenance-action
+          ref: context-from-env
+      - uses: actions/setup-go@v2
+        with:
+          go-version: 1.17
+      - name: Generate provenance
+        run: |
+          make build
+          echo foobar > mock
+          ./bin/slsa-provenance generate files --artifact-path mock --output-path provenance.json
       - name: Extract predicate
         run: jq '.predicate' provenance.json > predicate.json
 
