@@ -45,46 +45,21 @@ jobs:
       - name: Install cosign
         uses: sigstore/cosign-installer@v1.4.1
 
+      - name: Create mock artifact
+        run: echo "foobar" > mock
       - name: Generate provenance
-        run: |
-          cat << EOF > predicate.json
-          {
-            "builder": {
-              "id": "https://github.com/${{ github.repository }}/Attestations/GitHubHostedActions@v1"
-            },
-            "buildType": "https://github.com/Attestations/GitHubActionsWorkflow@v1",
-            "invocation": {
-              "configSource": {
-                "entryPoint": "${{ github.workflow }}",
-                "uri": "git+https://github.com/${{ github.repository }}",
-                "digest": {
-                  "sha1": "${{ github.sha }}"
-                }
-              },
-              "parameters": null,
-              "environment": null
-            },
-            "metadata": {
-              "buildInvocationId": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
-              "buildFinishedOn": "$(date +%Y-%m-%dT%H:%M:%SZ)",
-              "completeness": {
-                "parameters": true,
-                "environment": false,
-                "materials": false
-              },
-              "reproducible": false
-            },
-            "materials": [
-              {
-                "uri": "git+https://github.com/${{ github.repository }}",
-                "digest": {
-                  "sha1": "${{ github.sha }}"
-                }
-              }
-            ]
-          }
-          EOF
+        uses: ribbybibby/slsa-provenance-action@context-from-env
+        with:
+          artifact_path: mock
+          output_path: 'provenance.json'
+      - name: Extract predicate
+        run: jq '.predicate' provenance.json > predicate.json
 
+      - name: Activate service account
+        uses: google-github-actions/auth@v0.4.0
+        with:
+          workload_identity_provider: ${{ env.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
       - name: Activate service account
         uses: google-github-actions/auth@v0.4.0
         with:
