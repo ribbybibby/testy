@@ -48,10 +48,11 @@ jobs:
       - name: Create mock artifact
         run: echo "foobar" > mock
       - name: Generate provenance
-        uses: philips-labs/SLSA-Provenance-Action@v0.4.0
+        uses: philips-labs/SLSA-Provenance-Action@v0.5.0
         with:
-          artifact_path: mock
-          output_path: 'provenance.json'
+          command: generate
+          subcommand: files
+          arguments: --artifact-path mock
       - name: Extract predicate
         run: jq '.predicate' provenance.json > predicate.json
 
