@@ -4,8 +4,6 @@ on:
       image_ref:
         required: true
         type: string
-      dep_file:
-        type: string
 
 env:
   KMS_KEY: "gcpkms://projects/jetstack-rob-best/locations/europe-west1/keyRings/rob-best/cryptoKeys/cosign/versions/1"
@@ -77,21 +75,11 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/checkout@v2.4.0
-        if: ${{ inputs.dep_file != '' }}
-
       - name: Install cosign
         uses: sigstore/cosign-installer@v1.4.1
 
       - name: Install Syft
         uses: anchore/sbom-action/download-syft@v0.6.0
-
-      - name: Install CycloneDX
-        if: ${{ inputs.dep_file != '' }}
-        run: |
-          wget -O cyclonedx https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.19.0/cyclonedx-linux-x64
-          echo "c69838631671633c8910429e262151590551ed90ccbee9715558623b8d302f22  cyclonedx" | sha256sum --check
-          chmod +x cyclonedx
 
       - name: Activate service account
         uses: google-github-actions/auth@v0.4.0
@@ -104,20 +92,55 @@ jobs:
           gcloud auth configure-docker eu.gcr.io
 
       - name: Generate SBOM from image
-        run: syft "${{ inputs.image_ref }}" --output cyclonedx --file sbom.cyclonedx
-
-      - name: Generate SBOM from file
-        if: ${{ inputs.dep_file != '' }}
-        run: |
-          syft file:${{ inputs.dep_file }} --output cyclonedx --file file-sbom.cyclonedx
-          ./cyclonedx merge --input-files sbom.cyclonedx file-sbom.cyclonedx --input-format xml --output-format xml --output-file merged-sbom.cyclonedx
-          mv merged-sbom.cyclonedx sbom.cyclonedx
+        run: syft "${{ inputs.image_ref }}" --output json --file syft.json
 
       - name: Attach SBOM
-        run: cosign attach sbom --type cyclonedx --sbom sbom.cyclonedx "${{ inputs.image_ref }}"
+        run: cosign attach sbom --type syft --sbom syft.json "${{ inputs.image_ref }}"
 
       - name: Sign SBOM
         run: cosign sign --attachment=sbom --key ${{ env.KMS_KEY }} "${{ inputs.image_ref }}"
 
       - name: Verify SBOM
         run: cosign verify --attachment=sbom --key ${{ env.KMS_KEY }} "${{ inputs.image_ref }}"
+
+  scan:
+    runs-on: ubuntu-20.04
+    permissions:
+      id-token: write
+    needs: sbom
+    steps:
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v1.4.1
+
+      - name: Install Grype
+        run: |
+          wget -O grype.tar.gz  https://github.com/anchore/grype/releases/download/v0.31.1/grype_0.31.1_linux_amd64.tar.gz
+          echo "395dce4276a002800b8d0072a0cdaba540e1d6f0b92b90c8e1075ea8a775960e  grype.tar.gz" | sha256sum --check
+          tar xzf grype.tar.gz
+          chmod +x grype
+
+      - name: Activate service account
+        uses: google-github-actions/auth@v0.4.0
+        with:
+          workload_identity_provider: ${{ env.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
+
+      - name: Docker Login
+        run: |
+          gcloud auth configure-docker eu.gcr.io
+
+      - name: Scan
+        run: |
+          set -e -o pipefail
+          cosign download sbom "${{ inputs.image_ref }}" | ./grype -o json --file grype.json
+
+      - name: Attest
+        run: |
+          cat grype.json
+          # Attach the results of the vulnerability scan to the image as an
+          # attestation. This should probably not be the entire scan report.
+          #
+          # TBD what should be included, though. Some ideas:
+          #   - Highest severity?
+          #   - Summary of vulnerabilities?
+          #   - Pass/Fail?
