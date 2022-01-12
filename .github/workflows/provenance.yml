@@ -109,6 +109,8 @@ jobs:
       id-token: write
     needs: sbom
     steps:
+      - uses: actions/checkout@v2.4.0
+
       - name: Install cosign
         uses: sigstore/cosign-installer@v1.4.1
 
