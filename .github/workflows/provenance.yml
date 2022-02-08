@@ -50,7 +50,7 @@ jobs:
             {
               "name": "eu.gcr.io/jetstack-rob-best/testy",
               "digest": {
-                "sha256": "c8172ca9c460a1831eff21fa1d2ffb3bdec0da22cac2c38a70b1ac2f7fc33861"
+                "sha256": "f9426850f07adc9302fdb638b78b9d69f6d75e394fdf56eb4769205da03508fd"
               }
             }
           ]
