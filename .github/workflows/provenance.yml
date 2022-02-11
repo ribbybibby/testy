@@ -43,6 +43,43 @@ jobs:
     permissions:
       id-token: write
     steps:
+      - name: Install cosign
+        uses: sigstore/cosign-installer@51f8e5c6fce54e46006ae97d73b2b6315f518752
+        with:
+          cosign-release: ${{ env.COSIGN_VERSION }}
+
+      - name: Create mock artifact
+        run: echo "foobar" > mock
+      - name: Generate provenance
+        uses: ribbybibby/SLSA-Provenance-Action@env
+        with:
+          command: generate
+          subcommand: files
+          arguments: --artifact-path mock
+      - name: Extract predicate
+        run: jq '.predicate' provenance.json > predicate.json
+
+      - name: Google Cloud auth
+        uses: google-github-actions/auth@v0.6.0
+        with:
+          workload_identity_provider: ${{ env.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
+
+      - name: Docker Login
+        run: |
+          gcloud auth configure-docker eu.gcr.io
+
+      - name: Attach the attestation to the image
+        run: cosign attest --type slsaprovenance --predicate predicate.json --key ${{ env.KMS_KEY }} "${{ inputs.image_ref }}"
+
+      - name: Verify the image attestation
+        run: cosign verify-attestation --type slsaprovenance --key ${{ env.KMS_KEY }} "${{ inputs.image_ref }}"
+
+  subject:
+    runs-on: ubuntu-20.04
+    permissions:
+      id-token: write
+    steps:
       - name: Create subject 
         run: |
           cat << EOF > subjects.json
