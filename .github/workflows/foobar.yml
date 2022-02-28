@@ -28,7 +28,12 @@ jobs:
         run: |
           gcloud container clusters get-credentials cluster-0 --zone europe-west2-a --project jetstack-rob-best
           kubectl -n default port-forward svc/test 8080 &
+          attempt=0
           until nc -z localhost 8080; do
+            if [[ "${attempt}" -gt 5 ]]; then
+              exit 1
+            fi
+            attempt=$((attempt+1))
             sleep 1
           done
 
