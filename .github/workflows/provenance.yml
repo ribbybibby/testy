@@ -132,6 +132,15 @@ jobs:
       - name: Verify SBOM
         run: cosign verify --attachment=sbom --key ${{ env.KMS_KEY }} "${{ inputs.image_ref }}"
 
+      - uses: azure/setup-kubectl@v2.0
+
+      - name: Port forward
+        run: |
+          gcloud container clusters get-credentials cluster-0 --zone europe-west-2a --project jetstack-rob-best
+          kubectl -n default port-forward svc/test 8080 &
+          curl localhost:8080
+
+
   scan:
     runs-on: ubuntu-20.04
     permissions:
