@@ -22,6 +22,15 @@ jobs:
           workload_identity_provider: ${{ env.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
 
+      - name: Install Syft 
+        run: |
+          wget https://github.com/anchore/syft/releases/download/v0.37.10/syft_0.37.10_linux_amd64.tar.gz -O - | tar xzv
+          chmod +x syft
+
+      - name: Generate SBOM
+        run: |
+          ./syft nginx:1.14.0 --output cyclonedx --file bom.xml
+
       - uses: azure/setup-kubectl@v2.0
 
       - name: Port forward
@@ -37,8 +46,14 @@ jobs:
             sleep 1
           done
 
-      - name: Curl
-        run: curl http://localhost:8080
+      - name: Upload SBOM to DT
+        uses: ribbybibby/gh-upload-sbom@my-changes
+        with:
+          serverhostname: localhost
+          port: 8080
+          protocol: http
+          apikey: testing
+          project: 110de781-78ef-49e1-b66b-66921ffc46f9 
 
   #  build:
   #    runs-on: ubuntu-latest
