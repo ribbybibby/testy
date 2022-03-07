@@ -12,125 +12,16 @@ env:
   COSIGN_VERSION: 'v1.5.0'
 
 jobs:
-  sign:
+  port-forward:
     runs-on: ubuntu-20.04
     permissions:
       id-token: write
     steps:
-      - name: Install cosign
-        uses: sigstore/cosign-installer@47b61722b2c3f34f9f15f98f28a779f13cfb59cf
-        with:
-          cosign-release: ${{ env.COSIGN_VERSION }}
-
       - name: Activate service account
         uses: google-github-actions/auth@v0.4.0
         with:
           workload_identity_provider: ${{ env.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
-
-      - name: Docker Login
-        run: |
-          gcloud auth configure-docker eu.gcr.io
-
-      - name: Sign the image
-        run: cosign sign --key ${{ env.KMS_KEY }} "${{ inputs.image_ref }}"
-
-      - name: Verify the image
-        run: cosign verify --key ${{ env.KMS_KEY }} "${{ inputs.image_ref }}"
-
-          #attest:
-          #  runs-on: ubuntu-20.04
-          #  permissions:
-          #    id-token: write
-          #  steps:
-          #    - name: Install cosign
-          #      uses: sigstore/cosign-installer@51f8e5c6fce54e46006ae97d73b2b6315f518752
-          #      with:
-          #        cosign-release: ${{ env.COSIGN_VERSION }}
-
-          #    - name: Create mock artifact
-          #      run: echo "foobar" > mock
-          #    - name: Generate provenance
-          #      uses: ribbybibby/SLSA-Provenance-Action@env
-          #      with:
-          #        command: generate
-          #        subcommand: files
-          #        arguments: --artifact-path mock
-          #    - name: Extract predicate
-          #      run: jq '.predicate' provenance.json > predicate.json
-
-          #    - name: Google Cloud auth
-          #      uses: google-github-actions/auth@v0.6.0
-          #      with:
-          #        workload_identity_provider: ${{ env.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          #        service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
-
-          #    - name: Docker Login
-          #      run: |
-          #        gcloud auth configure-docker eu.gcr.io
-
-          #    - name: Attach the attestation to the image
-          #      run: cosign attest --type slsaprovenance --predicate predicate.json --key ${{ env.KMS_KEY }} "${{ inputs.image_ref }}"
-
-          #    - name: Verify the image attestation
-          #      run: cosign verify-attestation --type slsaprovenance --key ${{ env.KMS_KEY }} "${{ inputs.image_ref }}"
-
-  subject:
-    runs-on: ubuntu-20.04
-    permissions:
-      id-token: write
-    steps:
-      - name: Create subject 
-        run: |
-          cat << EOF > subjects.json
-          [
-            {
-              "name": "eu.gcr.io/jetstack-rob-best/testy",
-              "digest": {
-                "sha256": "87f79d0e247eb7ffb8f9de19340ec4c36a4ee5ed1b4d9f981a6b72f3ade2d0a6"
-              }
-            }
-          ]
-          EOF
-      - uses: actions/upload-artifact@v2
-        with:
-          name: subjects 
-          path: subjects.json
-
-  sbom:
-    runs-on: ubuntu-20.04
-    permissions:
-      id-token: write
-    steps:
-      - name: Install cosign
-        uses: sigstore/cosign-installer@47b61722b2c3f34f9f15f98f28a779f13cfb59cf
-        with:
-          cosign-release: ${{ env.COSIGN_VERSION }}
-
-      - name: Install Syft
-        uses: anchore/sbom-action/download-syft@v0.6.0
-
-      - name: Activate service account
-        uses: google-github-actions/auth@v0.4.0
-        with:
-          workload_identity_provider: ${{ env.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
-
-      - name: Docker Login
-        run: |
-          gcloud auth configure-docker eu.gcr.io
-
-      - name: Generate SBOM from image
-        run: syft "${{ inputs.image_ref }}" --output json --file syft.json
-
-      - name: Attach SBOM
-        run: cosign attach sbom --type syft --sbom syft.json "${{ inputs.image_ref }}"
-
-      - name: Sign SBOM
-        run: cosign sign --attachment=sbom --key ${{ env.KMS_KEY }} "${{ inputs.image_ref }}"
-
-      - name: Verify SBOM
-        run: cosign verify --attachment=sbom --key ${{ env.KMS_KEY }} "${{ inputs.image_ref }}"
 
       - uses: azure/setup-kubectl@v2.0
 
@@ -140,49 +31,177 @@ jobs:
           kubectl -n default port-forward svc/test 8080 &
           curl localhost:8080
 
-
-  scan:
-    runs-on: ubuntu-20.04
-    permissions:
-      id-token: write
-    needs: sbom
-    steps:
-      - uses: actions/checkout@v2.4.0
-
-      - name: Install cosign
-        uses: sigstore/cosign-installer@47b61722b2c3f34f9f15f98f28a779f13cfb59cf
-        with:
-          cosign-release: ${{ env.COSIGN_VERSION }}
-
-      - name: Install Grype
-        run: |
-          wget -O grype.tar.gz  https://github.com/anchore/grype/releases/download/v0.31.1/grype_0.31.1_linux_amd64.tar.gz
-          echo "395dce4276a002800b8d0072a0cdaba540e1d6f0b92b90c8e1075ea8a775960e  grype.tar.gz" | sha256sum --check
-          tar xzf grype.tar.gz
-          chmod +x grype
-
-      - name: Activate service account
-        uses: google-github-actions/auth@v0.4.0
-        with:
-          workload_identity_provider: ${{ env.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
-
-      - name: Docker Login
-        run: |
-          gcloud auth configure-docker eu.gcr.io
-
-      - name: Scan
-        run: |
-          set -e -o pipefail
-          cosign download sbom "${{ inputs.image_ref }}" | ./grype -o json --file grype.json
-
-      - name: Attest
-        run: |
-          cat grype.json
-          # Attach the results of the vulnerability scan to the image as an
-          # attestation. This should probably not be the entire scan report.
-          #
-          # TBD what should be included, though. Some ideas:
-          #   - Highest severity?
-          #   - Summary of vulnerabilities?
-          #   - Pass/Fail?
+#  sign:
+#    runs-on: ubuntu-20.04
+#    permissions:
+#      id-token: write
+#    steps:
+#      - name: Install cosign
+#        uses: sigstore/cosign-installer@47b61722b2c3f34f9f15f98f28a779f13cfb59cf
+#        with:
+#          cosign-release: ${{ env.COSIGN_VERSION }}
+#
+#      - name: Activate service account
+#        uses: google-github-actions/auth@v0.4.0
+#        with:
+#          workload_identity_provider: ${{ env.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+#          service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
+#
+#      - name: Docker Login
+#        run: |
+#          gcloud auth configure-docker eu.gcr.io
+#
+#      - name: Sign the image
+#        run: cosign sign --key ${{ env.KMS_KEY }} "${{ inputs.image_ref }}"
+#
+#      - name: Verify the image
+#        run: cosign verify --key ${{ env.KMS_KEY }} "${{ inputs.image_ref }}"
+#
+#          #attest:
+#          #  runs-on: ubuntu-20.04
+#          #  permissions:
+#          #    id-token: write
+#          #  steps:
+#          #    - name: Install cosign
+#          #      uses: sigstore/cosign-installer@51f8e5c6fce54e46006ae97d73b2b6315f518752
+#          #      with:
+#          #        cosign-release: ${{ env.COSIGN_VERSION }}
+#
+#          #    - name: Create mock artifact
+#          #      run: echo "foobar" > mock
+#          #    - name: Generate provenance
+#          #      uses: ribbybibby/SLSA-Provenance-Action@env
+#          #      with:
+#          #        command: generate
+#          #        subcommand: files
+#          #        arguments: --artifact-path mock
+#          #    - name: Extract predicate
+#          #      run: jq '.predicate' provenance.json > predicate.json
+#
+#          #    - name: Google Cloud auth
+#          #      uses: google-github-actions/auth@v0.6.0
+#          #      with:
+#          #        workload_identity_provider: ${{ env.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+#          #        service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
+#
+#          #    - name: Docker Login
+#          #      run: |
+#          #        gcloud auth configure-docker eu.gcr.io
+#
+#          #    - name: Attach the attestation to the image
+#          #      run: cosign attest --type slsaprovenance --predicate predicate.json --key ${{ env.KMS_KEY }} "${{ inputs.image_ref }}"
+#
+#          #    - name: Verify the image attestation
+#          #      run: cosign verify-attestation --type slsaprovenance --key ${{ env.KMS_KEY }} "${{ inputs.image_ref }}"
+#
+#  subject:
+#    runs-on: ubuntu-20.04
+#    permissions:
+#      id-token: write
+#    steps:
+#      - name: Create subject 
+#        run: |
+#          cat << EOF > subjects.json
+#          [
+#            {
+#              "name": "eu.gcr.io/jetstack-rob-best/testy",
+#              "digest": {
+#                "sha256": "87f79d0e247eb7ffb8f9de19340ec4c36a4ee5ed1b4d9f981a6b72f3ade2d0a6"
+#              }
+#            }
+#          ]
+#          EOF
+#      - uses: actions/upload-artifact@v2
+#        with:
+#          name: subjects 
+#          path: subjects.json
+#
+#  sbom:
+#    runs-on: ubuntu-20.04
+#    permissions:
+#      id-token: write
+#    steps:
+#      - name: Install cosign
+#        uses: sigstore/cosign-installer@47b61722b2c3f34f9f15f98f28a779f13cfb59cf
+#        with:
+#          cosign-release: ${{ env.COSIGN_VERSION }}
+#
+#      - name: Install Syft
+#        uses: anchore/sbom-action/download-syft@v0.6.0
+#
+#      - name: Activate service account
+#        uses: google-github-actions/auth@v0.4.0
+#        with:
+#          workload_identity_provider: ${{ env.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+#          service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
+#
+#      - name: Docker Login
+#        run: |
+#          gcloud auth configure-docker eu.gcr.io
+#
+#      - name: Generate SBOM from image
+#        run: syft "${{ inputs.image_ref }}" --output json --file syft.json
+#
+#      - name: Attach SBOM
+#        run: cosign attach sbom --type syft --sbom syft.json "${{ inputs.image_ref }}"
+#
+#      - name: Sign SBOM
+#        run: cosign sign --attachment=sbom --key ${{ env.KMS_KEY }} "${{ inputs.image_ref }}"
+#
+#      - name: Verify SBOM
+#        run: cosign verify --attachment=sbom --key ${{ env.KMS_KEY }} "${{ inputs.image_ref }}"
+#
+#      - uses: azure/setup-kubectl@v2.0
+#
+#      - name: Port forward
+#        run: |
+#          gcloud container clusters get-credentials cluster-0 --zone europe-west-2a --project jetstack-rob-best
+#          kubectl -n default port-forward svc/test 8080 &
+#          curl localhost:8080
+#
+#
+#  scan:
+#    runs-on: ubuntu-20.04
+#    permissions:
+#      id-token: write
+#    needs: sbom
+#    steps:
+#      - uses: actions/checkout@v2.4.0
+#
+#      - name: Install cosign
+#        uses: sigstore/cosign-installer@47b61722b2c3f34f9f15f98f28a779f13cfb59cf
+#        with:
+#          cosign-release: ${{ env.COSIGN_VERSION }}
+#
+#      - name: Install Grype
+#        run: |
+#          wget -O grype.tar.gz  https://github.com/anchore/grype/releases/download/v0.31.1/grype_0.31.1_linux_amd64.tar.gz
+#          echo "395dce4276a002800b8d0072a0cdaba540e1d6f0b92b90c8e1075ea8a775960e  grype.tar.gz" | sha256sum --check
+#          tar xzf grype.tar.gz
+#          chmod +x grype
+#
+#      - name: Activate service account
+#        uses: google-github-actions/auth@v0.4.0
+#        with:
+#          workload_identity_provider: ${{ env.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+#          service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
+#
+#      - name: Docker Login
+#        run: |
+#          gcloud auth configure-docker eu.gcr.io
+#
+#      - name: Scan
+#        run: |
+#          set -e -o pipefail
+#          cosign download sbom "${{ inputs.image_ref }}" | ./grype -o json --file grype.json
+#
+#      - name: Attest
+#        run: |
+#          cat grype.json
+#          # Attach the results of the vulnerability scan to the image as an
+#          # attestation. This should probably not be the entire scan report.
+#          #
+#          # TBD what should be included, though. Some ideas:
+#          #   - Highest severity?
+#          #   - Summary of vulnerabilities?
+#          #   - Pass/Fail?

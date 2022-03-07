@@ -1,0 +1,21 @@
+name: Images
+
+on:
+  push:
+    branches: [ sbom ]
+
+jobs:
+  subject:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Create images file
+        run: |
+          cat << EOF > images.json
+          [
+            "eu.gcr.io/jetstack-rob-best/testy@sha256:87f79d0e247eb7ffb8f9de19340ec4c36a4ee5ed1b4d9f981a6b72f3ade2d0a6"
+          ]
+          EOF
+      - uses: actions/upload-artifact@v2
+        with:
+          name: images
+          path: images.json
