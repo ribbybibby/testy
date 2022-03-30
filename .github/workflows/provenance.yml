@@ -7,9 +7,9 @@ on:
 
 env:
   KMS_KEY: "gcpkms://projects/jetstack-rob-best/locations/europe-west1/keyRings/rob-best/cryptoKeys/cosign/versions/1"
-  GCP_WORKLOAD_IDENTITY_PROVIDER: 'projects/998629990322/locations/global/workloadIdentityPools/ribbybibby/providers/testy'
-  GCP_SERVICE_ACCOUNT: 'cosigner@jetstack-rob-best.iam.gserviceaccount.com'
-  COSIGN_VERSION: 'v1.5.0'
+  GCP_WORKLOAD_IDENTITY_PROVIDER: "projects/998629990322/locations/global/workloadIdentityPools/ribbybibby/providers/testy"
+  GCP_SERVICE_ACCOUNT: "cosigner@jetstack-rob-best.iam.gserviceaccount.com"
+  COSIGN_VERSION: "v1.5.0"
 
 jobs:
   sbom:
@@ -33,9 +33,9 @@ jobs:
           gcloud auth configure-docker eu.gcr.io
 
       - name: Generate SBOM from image
-        uses: 'docker://anchore/syft:v0.42.2@sha256:16a773608dd63d4beb587dee39f7b0574c01aa325739d268540683d3cd9c7323'
+        uses: "docker://anchore/syft:v0.42.2@sha256:16a773608dd63d4beb587dee39f7b0574c01aa325739d268540683d3cd9c7323"
         with:
-          args: "${{ inputs.image_ref }}" --output json --file syft.json
+          args: ${{ inputs.image_ref }} --output json --file syft.json
 
       - name: Attach SBOM
         run: cosign attach sbom --type syft --sbom syft.json "${{ inputs.image_ref }}"
@@ -107,7 +107,7 @@ jobs:
 #    permissions:
 #      id-token: write
 #    steps:
-#      - name: Create subject 
+#      - name: Create subject
 #        run: |
 #          cat << EOF > subjects.json
 #          [
@@ -121,50 +121,23 @@ jobs:
 #          EOF
 #      - uses: actions/upload-artifact@v2
 #        with:
-#          name: subjects 
+#          name: subjects
 #          path: subjects.json
 #
-  sbom:
-    runs-on: ubuntu-20.04
-    permissions:
-      id-token: write
-    steps:
-      - name: Install cosign
-        uses: sigstore/cosign-installer@47b61722b2c3f34f9f15f98f28a779f13cfb59cf
-        with:
-          cosign-release: ${{ env.COSIGN_VERSION }}
 
-      - name: Activate service account
-        uses: google-github-actions/auth@v0.4.0
-        with:
-          workload_identity_provider: ${{ env.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
+#- name: Sign SBOM
+#  run: cosign sign --attachment=sbom --key ${{ env.KMS_KEY }} "${{ inputs.image_ref }}"
 
-      - name: Docker Login
-        run: |
-          gcloud auth configure-docker eu.gcr.io
+#- name: Verify SBOM
+#  run: cosign verify --attachment=sbom --key ${{ env.KMS_KEY }} "${{ inputs.image_ref }}"
 
-      - name: Generate SBOM from image
-        uses: docker://anchore/syft:v0.42.2@sha256:16a773608dd63d4beb587dee39f7b0574c01aa325739d268540683d3cd9c7323
-        with:
-          args: "${{ inputs.image_ref }}" --output json --file syft.json
+#- uses: azure/setup-kubectl@v2.0
 
-      - name: Attach SBOM
-        run: cosign attach sbom --type syft --sbom syft.json "${{ inputs.image_ref }}"
-
-          #- name: Sign SBOM
-          #  run: cosign sign --attachment=sbom --key ${{ env.KMS_KEY }} "${{ inputs.image_ref }}"
-
-          #- name: Verify SBOM
-          #  run: cosign verify --attachment=sbom --key ${{ env.KMS_KEY }} "${{ inputs.image_ref }}"
-
-          #- uses: azure/setup-kubectl@v2.0
-
-          #- name: Port forward
-          #  run: |
-          #    gcloud container clusters get-credentials cluster-0 --zone europe-west-2a --project jetstack-rob-best
-          #    kubectl -n default port-forward svc/test 8080 &
-          #    curl localhost:8080
+#- name: Port forward
+#  run: |
+#    gcloud container clusters get-credentials cluster-0 --zone europe-west-2a --project jetstack-rob-best
+#    kubectl -n default port-forward svc/test 8080 &
+#    curl localhost:8080
 #
 #
 #  scan:

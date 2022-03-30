@@ -1,86 +1,42 @@
-#name: Docker
-#
-#on:
-#  push:
-#    branches: [ sbom ]
-#
-#env:
-#  KMS_KEY: "gcpkms://projects/jetstack-rob-best/locations/europe-west1/keyRings/rob-best/cryptoKeys/cosign/versions/1"
-#  GCP_WORKLOAD_IDENTITY_PROVIDER: 'projects/998629990322/locations/global/workloadIdentityPools/ribbybibby/providers/testy'
-#  GCP_SERVICE_ACCOUNT: 'cosigner@jetstack-rob-best.iam.gserviceaccount.com'
-#  COSIGN_VERSION: 'v1.5.0'
-#
-#jobs:
-#  port-forward:
-#    runs-on: ubuntu-20.04
-#    permissions:
-#      id-token: write
-#    steps:
-#      - name: Activate service account
-#        uses: google-github-actions/auth@v0.4.0
-#        with:
-#          workload_identity_provider: ${{ env.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-#          service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
-#
-#      - name: Install Syft 
-#        run: |
-#          wget https://github.com/anchore/syft/releases/download/v0.37.10/syft_0.37.10_linux_amd64.tar.gz -O - | tar xzv
-#          chmod +x syft
-#
-#      - name: Generate SBOM
-#        run: |
-#          ./syft nginx:1.14.0 --output cyclonedx --file bom.xml
-#
-#      - uses: azure/setup-kubectl@v2.0
-#
-#      - name: Port forward
-#        run: |
-#          gcloud container clusters get-credentials cluster-0 --zone europe-west2-a --project jetstack-rob-best
-#          kubectl -n default port-forward svc/test 8080 &
-#          attempt=0
-#          until nc -z localhost 8080; do
-#            if [[ "${attempt}" -gt 5 ]]; then
-#              exit 1
-#            fi
-#            attempt=$((attempt+1))
-#            sleep 1
-#          done
-#
-#      - name: Upload SBOM to DT
-#        uses: ribbybibby/gh-upload-sbom@my-changes
-#        with:
-#          serverhostname: localhost
-#          port: 8080
-#          protocol: http
-#          apikey: testing
-#          project: 110de781-78ef-49e1-b66b-66921ffc46f9 
-#
-#  #  build:
-#  #    runs-on: ubuntu-latest
-#  #    permissions:
-#  #      id-token: write
-#  #    steps:
-#  #      - uses: actions/checkout@v2.4.0
-#  #      - name: Build Docker Image
-#  #        run: make build-image-testy
-#  #      - uses: google-github-actions/auth@v0.4.0
-#  #        with:
-#  #          workload_identity_provider: ${{ env.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-#  #          service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
-#  #      - name: Docker Login
-#  #        run: |
-#  #          gcloud auth configure-docker eu.gcr.io
-#  #      - name: Push image
-#  #        run: make push-image-testy
-#  #      # Pass the image ref to the provenance job
-#  #      - name: Set the output image ref
-#  #        id: output
-#  #        run: make output-image-ref-testy
-#  #    outputs:
-#  #      image_ref: ${{ steps.output.outputs.image_ref }}
-#  #
-#  #  provenance:
-#  #    needs: build
-#  #    uses: ribbybibby/testy/.github/workflows/provenance.yml@sbom
-#  #    with:
-#  #      image_ref: ${{ needs.build.outputs.image_ref }}
+name: Docker
+
+on:
+  push:
+    branches: [ sbom ]
+
+env:
+  KMS_KEY: "gcpkms://projects/jetstack-rob-best/locations/europe-west1/keyRings/rob-best/cryptoKeys/cosign/versions/1"
+  GCP_WORKLOAD_IDENTITY_PROVIDER: 'projects/998629990322/locations/global/workloadIdentityPools/ribbybibby/providers/testy'
+  GCP_SERVICE_ACCOUNT: 'cosigner@jetstack-rob-best.iam.gserviceaccount.com'
+  COSIGN_VERSION: 'v1.5.0'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v2.4.0
+      - name: Build Docker Image
+        run: make build-image-testy
+      - uses: google-github-actions/auth@v0.4.0
+        with:
+          workload_identity_provider: ${{ env.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
+      - name: Docker Login
+        run: |
+          gcloud auth configure-docker eu.gcr.io
+      - name: Push image
+        run: make push-image-testy
+      # Pass the image ref to the provenance job
+      - name: Set the output image ref
+        id: output
+        run: make output-image-ref-testy
+    outputs:
+      image_ref: ${{ steps.output.outputs.image_ref }}
+  
+  provenance:
+    needs: build
+    uses: ribbybibby/testy/.github/workflows/provenance.yml@sbom
+    with:
+      image_ref: ${{ needs.build.outputs.image_ref }}
