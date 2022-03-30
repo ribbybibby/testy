@@ -12,6 +12,33 @@ env:
   COSIGN_VERSION: 'v1.5.0'
 
 jobs:
+  sbom:
+    runs-on: ubuntu-20.04
+    permissions:
+      id-token: write
+    steps:
+      - name: Install cosign
+        uses: sigstore/cosign-installer@47b61722b2c3f34f9f15f98f28a779f13cfb59cf
+        with:
+          cosign-release: ${{ env.COSIGN_VERSION }}
+
+      - name: Activate service account
+        uses: google-github-actions/auth@v0.4.0
+        with:
+          workload_identity_provider: ${{ env.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
+
+      - name: Docker Login
+        run: |
+          gcloud auth configure-docker eu.gcr.io
+
+      - name: Generate SBOM from image
+        uses: 'docker://anchore/syft:v0.42.2@sha256:16a773608dd63d4beb587dee39f7b0574c01aa325739d268540683d3cd9c7323'
+        with:
+          args: "${{ inputs.image_ref }}" --output json --file syft.json
+
+      - name: Attach SBOM
+        run: cosign attach sbom --type syft --sbom syft.json "${{ inputs.image_ref }}"
 #  sign:
 #    runs-on: ubuntu-20.04
 #    permissions:
