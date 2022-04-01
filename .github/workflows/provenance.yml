@@ -24,6 +24,8 @@ jobs:
 
       - name: Install Syft
         uses: anchore/sbom-action/download-syft@a104a28b780f6cc1341a4058797c06280a29a681
+        with:
+          syft-version: 'v0.43.0'
 
       - name: Activate service account
         uses: google-github-actions/auth@v0.4.0
