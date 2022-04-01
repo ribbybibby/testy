@@ -23,11 +23,7 @@ jobs:
           cosign-release: ${{ env.COSIGN_VERSION }}
 
       - name: Install Syft
-        run: |
-          wget -O syft.tar.gz https://github.com/anchore/syft/releases/download/v0.43.0/syft_0.43.0_linux_amd64.tar.gz
-          echo '0877a121a916dc68eb0e69c6db334e9713f91af0734d7d3a5db94a15a05aa6c8  syft.tar.gz' | sha256sum --check
-          tar xzvf syft.tar.gz
-          chmod +x syft
+        uses: anchore/sbom-action/download-syft@a104a28b780f6cc1341a4058797c06280a29a681
 
       - name: Activate service account
         uses: google-github-actions/auth@v0.4.0
@@ -40,7 +36,7 @@ jobs:
           gcloud auth configure-docker eu.gcr.io
 
       - name: Generate SBOM from image
-        run: ./syft "${{ inputs.image_ref }}" --output cyclonedx --file sbom.cyclonedx
+        run: syft "${{ inputs.image_ref }}" --output cyclonedx --file sbom.cyclonedx
 
       - name: Attach SBOM
         run: cosign attach sbom --type cyclonedx --sbom sbom.cyclonedx "${{ inputs.image_ref }}"
