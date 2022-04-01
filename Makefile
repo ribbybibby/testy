@@ -1,6 +1,6 @@
 ROOT_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 
-GO_VERSION ?= 1.14
+GO_VERSION ?= 1.18
 GO := $(or $(shell which go$(GO_VERSION)),$(shell which go))
 
 OS := $(shell $(GO) env GOOS)

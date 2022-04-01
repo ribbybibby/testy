@@ -1,4 +1,4 @@
-module github.com/ribbybibby/testy2
+module github.com/ribbybibby/testy
 
 go 1.17
 
