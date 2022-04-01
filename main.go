@@ -1,7 +1,15 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/google/go-containerregistry/pkg/name"
+)
 
 func main() {
-	fmt.Println("ccchanges")
+	ref, err := name.ParseReference("alpine:latest")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(ref.Name())
 }

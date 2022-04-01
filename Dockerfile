@@ -1,6 +1,21 @@
-FROM alpine:latest
+FROM golang:1.18 as builder
 
-COPY docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
+WORKDIR /go/src/github.com/ribbybibby/testy
 
-ENTRYPOINT ["/docker-entrypoint.sh"]
+COPY go.mod go.sum ./
+
+RUN go mod download
+
+COPY . .
+
+RUN go build -o testy .
+
+FROM gcr.io/distroless/static:nonroot
+
+WORKDIR /
+
+COPY --from=builder /go/src/github.com/ribbybibby/testy/testy testy
+
+USER 65532:65532
+
+ENTRYPOINT ["/testy"]
