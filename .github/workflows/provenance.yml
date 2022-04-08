@@ -42,7 +42,7 @@ jobs:
         run: cosign attach sbom --type cyclonedx --sbom sbom.cyclonedx "${{ inputs.image_ref }}"
 
       - name: Upload SBOM to Dependency Track
-        uses: dependency-track/gh-upload-sbom@6b705e2b125caf42a4789ac8ce8d7d831396a3a2
+        uses: DependencyTrack/gh-upload-sbom@6b705e2b125caf42a4789ac8ce8d7d831396a3a2
         with:
           serverhostname: localhost
           port: 8080
