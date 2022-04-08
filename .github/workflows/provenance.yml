@@ -40,6 +40,16 @@ jobs:
 
       - name: Attach SBOM
         run: cosign attach sbom --type cyclonedx --sbom sbom.cyclonedx "${{ inputs.image_ref }}"
+
+      - name: Upload SBOM to Dependency Track
+        uses: Dependency-Track/gh-upload-sbom@6b705e2b125caf42a4789ac8ce8d7d831396a3a2
+        with:
+          serverhostname: localhost
+          port: 8080
+          protocol: http
+          apikey: "foobar"
+          project: "XXXXXX"
+          bomfilename: sbom.cyclonedx
 #  sign:
 #    runs-on: ubuntu-20.04
 #    permissions:
